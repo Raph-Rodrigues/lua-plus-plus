@@ -1,0 +1,22 @@
+# Build artifacts
+src/*.o
+src/lua
+src/lua++
+src/luac
+src/liblua.a
+luac.out
+*.out
+
+# Packaging artifacts
+pkg/
+src/pkg/
+dist/
+*.pkg.tar.zst
+*.pkg.tar.xz
+*.tar.gz
+.SRCINFO
+
+# Editors / OS
+*.swp
+*~
+.DS_Store

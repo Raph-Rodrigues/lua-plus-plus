@@ -1,0 +1,103 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Lua++
+        run: make -j"$(nproc)"
+
+      - name: Run Lua++ test suite
+        run: ./src/lua++ test_luaplusplus.lua
+
+  package:
+    name: Build pacman package
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Pin version and source checksum
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+          TARBALL="lua++-${VERSION}.tar.gz"
+          curl -L --fail --retry 3 --retry-delay 2 \
+            -o "$TARBALL" \
+            "https://github.com/${GITHUB_REPOSITORY}/archive/refs/tags/${GITHUB_REF_NAME}.tar.gz"
+
+          SUM="$(sha256sum "$TARBALL" | awk '{print $1}')"
+          sed -i "s/^pkgver=.*/pkgver=${VERSION}/" PKGBUILD
+          sed -i "s/^sha256sums=.*/sha256sums=('${SUM}')/" PKGBUILD
+
+          echo "Building lua++ ${VERSION} (sha256 ${SUM})"
+
+      - name: Build package in Arch Linux
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          chmod 777 dist
+
+          docker run --rm \
+            -v "$PWD:/src:ro" \
+            -v "$PWD/dist:/dist" \
+            archlinux:latest bash -c '
+              set -euo pipefail
+              pacman -Syu --noconfirm --needed base-devel
+              useradd -m builder
+              cp -a /src /home/builder/work
+              chown -R builder:builder /home/builder/work
+              chown builder:builder /dist
+              su builder -c "cd /home/builder/work && makepkg --noconfirm && makepkg --printsrcinfo > .SRCINFO"
+              cp /home/builder/work/*.pkg.tar.zst /dist/
+              cp /home/builder/work/PKGBUILD /dist/
+              cp /home/builder/work/.SRCINFO /dist/
+            '
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Lua++ ${{ env.VERSION }}
+          body: |
+            ## Lua++ ${{ env.VERSION }}
+
+            Fork experimental do Lua 5.5.1 com ponto e vírgula obrigatório,
+            operadores compostos, `++` como expressão e tipagem opcional
+            verificada em tempo de execução.
+
+            ### Instalar no Arch Linux
+
+            ```sh
+            sudo pacman -U lua++-${{ env.VERSION }}-1-x86_64.pkg.tar.zst
+            ```
+
+            ### Compilar a partir do código-fonte
+
+            ```sh
+            tar xf lua++-${{ env.VERSION }}.tar.gz
+            cd lua-plus-plus-${{ env.VERSION }}
+            make
+            ./src/lua++ test_luaplusplus.lua
+            ```
+
+            Documentação completa: `LUA++.md`.
+          files: |
+            dist/*.pkg.tar.zst
+            dist/PKGBUILD
+            dist/.SRCINFO

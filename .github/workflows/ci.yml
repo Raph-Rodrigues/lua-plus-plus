@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Lua++
+        run: make -j"$(nproc)"
+
+      - name: Run Lua++ test suite
+        run: ./src/lua++ test_luaplusplus.lua
+
+      - name: Show interpreter version
+        run: ./src/lua++ -v
