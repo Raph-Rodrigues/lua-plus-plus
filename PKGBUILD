@@ -17,6 +17,7 @@ url="https://github.com/Raph-Rodrigues/lua-plus-plus"
 license=('MIT')
 depends=('glibc')
 makedepends=('make' 'gcc')
+options=('!debug')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
 sha256sums=('SKIP')
 

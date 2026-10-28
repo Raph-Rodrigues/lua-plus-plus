@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Build Lua++
         run: make -j"$(nproc)"
@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Pin version and source checksum
         run: |
@@ -45,12 +45,13 @@ jobs:
           sed -i "s/^pkgver=.*/pkgver=${VERSION}/" PKGBUILD
           sed -i "s/^sha256sums=.*/sha256sums=('${SUM}')/" PKGBUILD
 
+          mkdir -p dist
+          cp "$TARBALL" dist/
           echo "Building lua++ ${VERSION} (sha256 ${SUM})"
 
       - name: Build package in Arch Linux
         run: |
           set -euo pipefail
-          mkdir -p dist
           chmod 777 dist
 
           docker run --rm \
@@ -66,11 +67,18 @@ jobs:
               su builder -c "cd /home/builder/work && makepkg --noconfirm && makepkg --printsrcinfo > .SRCINFO"
               cp /home/builder/work/*.pkg.tar.zst /dist/
               cp /home/builder/work/PKGBUILD /dist/
-              cp /home/builder/work/.SRCINFO /dist/
+              cp /home/builder/work/.SRCINFO /dist/SRCINFO
             '
 
+      - name: Generate checksums
+        run: |
+          set -euo pipefail
+          cd dist
+          sha256sum lua++-*.pkg.tar.zst lua++-*.tar.gz PKGBUILD SRCINFO > SHA256SUMS
+          cat SHA256SUMS
+
       - name: Publish GitHub release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.ref_name }}
           name: Lua++ ${{ env.VERSION }}
@@ -96,8 +104,13 @@ jobs:
             ./src/lua++ test_luaplusplus.lua
             ```
 
+            Os arquivos `SHA256SUMS`, `PKGBUILD` e `SRCINFO` também estão
+            anexados para verificação e empacotamento.
+
             Documentação completa: `LUA++.md`.
           files: |
             dist/*.pkg.tar.zst
+            dist/lua++-*.tar.gz
             dist/PKGBUILD
-            dist/.SRCINFO
+            dist/SRCINFO
+            dist/SHA256SUMS
