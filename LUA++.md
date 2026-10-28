@@ -24,6 +24,22 @@ Os binários ficam em `src/lua++` (interpretador do fork), `src/lua`
 (mesmo interpretador, nome compatível com o Lua) e `src/luac` (compilador).
 `make clean` remove todos.
 
+### Instalação no Arch Linux
+
+O projeto é publicado em
+<https://github.com/Raph-Rodrigues/lua-plus-plus>, com releases automáticas
+contendo o pacote `.pkg.tar.zst`, o `PKGBUILD` e o `SRCINFO`:
+
+```sh
+sudo pacman -U lua++-5.5.1-1-x86_64.pkg.tar.zst
+```
+
+Para compilar o pacote localmente:
+
+```sh
+makepkg -si
+```
+
 ---
 
 ## 1. Ponto e vírgula obrigatório
